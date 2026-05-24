@@ -1,6 +1,6 @@
 package engine
 
-import "fmt"
+import "log/slog"
 
 type Engine struct {
 }
@@ -10,5 +10,5 @@ func New() *Engine {
 }
 
 func (eng Engine) Run() {
-	fmt.Println("Hello, mydb")
+	slog.Info("engine started", "name", "mydb")
 }

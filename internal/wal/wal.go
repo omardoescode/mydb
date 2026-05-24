@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path"
 )
@@ -25,8 +26,6 @@ import (
 * 	- Append's fsync-every-call is overkill but correct; later optimize to fsync only on Commit record + group commit
  */
 
-const WAL_DIRECTORY_PATH = "./mydb_wal/"
-
 type WAL struct {
 	nextLSN    LSN
 	flushedLSN LSN
@@ -35,12 +34,12 @@ type WAL struct {
 }
 
 func New(filePath string) (*WAL, error) {
-	err := os.MkdirAll(WAL_DIRECTORY_PATH, 0755)
+	err := os.MkdirAll(path.Dir(filePath), 0755)
 	if err != nil {
 		return nil, err
 	}
 
-	file, err := os.OpenFile(path.Join(WAL_DIRECTORY_PATH, filePath), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
+	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +52,6 @@ func New(filePath string) (*WAL, error) {
 	}, nil
 }
 
-// TODO: Change thsi signature: Body should be an internal struct
 func (w *WAL) Append(b Body) (LSN, error) {
 	lsn := w.nextLSN
 	if _, err := writeEntry(w.file, lsn, b); err != nil {
@@ -67,8 +65,9 @@ func (w *WAL) Append(b Body) (LSN, error) {
 	return lsn, nil
 }
 
+// TODO: Use 2 files. one for read, and one for normal writing stuff
 func Restore(filePath string) (*WAL, error) {
-	_, err := os.Stat(path.Join(WAL_DIRECTORY_PATH, filePath))
+	_, err := os.Stat(filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +77,7 @@ func Restore(filePath string) (*WAL, error) {
 
 	// Read the entire file
 	file, err := os.OpenFile(
-		path.Join(WAL_DIRECTORY_PATH, filePath), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
+		filePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
 
 	if err != nil {
 		return nil, err
@@ -110,7 +109,7 @@ func Restore(filePath string) (*WAL, error) {
 		// NOTE: Here we assume all have been flushed
 		flushedLSN++
 
-		fmt.Println(entry)
+		slog.Debug("wal replay", "lsn", entry.LSN, "kind", fmt.Sprintf("%T", entry.Body))
 	}
 
 	return wal, nil

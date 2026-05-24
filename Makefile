@@ -12,7 +12,7 @@ vet: fmt
 	go vet ./...
 
 build: vet
-	go build -o ./bin/mydb ./
+	go build -o ./bin/mydb ./cmd
 
 run: vet
 	go run ./cmd/main.go

@@ -1,0 +1,4 @@
+{
+  "DATA_DIR": "./data",
+  "WAL_DIR": "./mydb_wal"
+}
